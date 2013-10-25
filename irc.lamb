@@ -16,9 +16,6 @@ splitirc(str) -> splitirc'(str, "", []).
 head(x::_) -> x.
 tail(_::xs) -> xs.
 
-fst((x, _)) -> x.
-snd((_, y)) -> y.
-
 -- (result, rest)
 takeUntilSpace'(" "::xs, acc) -> (acc, xs).
 takeUntilSpace'(x::xs, acc) -> takeUntilSpace'(xs, acc + x).
@@ -81,12 +78,12 @@ handleCommand(src, cmd, args) ->
 handleLine(line) -> do
 	if head(line) == ":" then do
 		-- source
-		sp = takeUntilSpace(tail(line));
-		message = splitirc(snd(sp));
-		handleCommand(fst(sp), head(message), tail(message))
+		(source, rest) = takeUntilSpace(tail(line));
+		command::args = splitirc(rest);
+		handleCommand(source, command, args)
 	end else do
-		message = splitirc(line);
-		handleCommand("", head(message), tail(message))
+		command::args = splitirc(line);
+		handleCommand(source, command, args)
 	end
 end.
 
