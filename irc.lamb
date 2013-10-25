@@ -26,12 +26,6 @@ ircnick'("!"::xs, acc) -> acc.
 ircnick'(x::xs, acc) -> ircnick'(xs, acc + x).
 ircnick(str) -> ircnick'(str, "").
 
-
--- and then we'll kick off the main program.
-
--- 127.0.0.1
-sock = sockopen("127.0.0.1", 6667). --("irc.freenode.net", 6667).
-
 say(chan, msg) -> fputstr(sock, "PRIVMSG " + chan + " :" + msg + "\r\n").
 
 handleMessage(nick, chan, "$ping") -> say(chan, nick + ": pong").
@@ -75,17 +69,23 @@ handleCommand(_, "366", _) -> (). -- End of NAMES list
 handleCommand(src, cmd, args) ->
 	putstrln("Unhandled command: " + cmd + ", with args: " + repr(args) + " from " + src).
 
-handleLine(line) -> do
-	if head(line) == ":" then do
-		-- source
-		(source, rest) = takeUntilSpace(tail(line));
-		command::args = splitirc(rest);
-		handleCommand(source, command, args)
-	end else do
-		command::args = splitirc(line);
-		handleCommand(source, command, args)
-	end
+handleLine(":" :: line) -> do
+	-- sourced message
+	(source, rest) = takeUntilSpace(line);
+	command::args = splitirc(rest);
+	handleCommand(source, command, args)
 end.
+
+handleLine(line) -> do
+	-- non-sourced message
+	command::args = splitirc(line);
+	handleCommand(source, command, args)
+end.
+
+-- now for our actual program!
+
+-- build our socket and connect to the server
+sock = sockopen("127.0.0.1", 6667).
 
 -- send introduction
 fputstr(sock, "PASS foobar\r\n").
