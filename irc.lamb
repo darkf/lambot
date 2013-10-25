@@ -1,0 +1,114 @@
+-- First we'll define some helper functions
+
+-- Splits a string by spaces, or until it encounters a :, whereby the following is considered one element.
+splitirc'("", stracc, acc) -> acc + [stracc].
+splitirc'(" "::xs, stracc, acc) -> do
+	splitirc'(xs, "", acc + [stracc])
+end.
+-- prefix message
+splitirc'(":"::xs, _, acc) -> do
+	acc + [xs]
+end.
+splitirc'(x::xs, stracc, acc) -> splitirc'(xs, stracc + x, acc).
+-- helper function
+splitirc(str) -> splitirc'(str, "", []).
+
+head(x::_) -> x.
+tail(_::xs) -> xs.
+
+fst((x, _)) -> x.
+snd((_, y)) -> y.
+
+-- (result, rest)
+takeUntilSpace'(" "::xs, acc) -> (acc, xs).
+takeUntilSpace'(x::xs, acc) -> takeUntilSpace'(xs, acc + x).
+takeUntilSpace(str) -> takeUntilSpace'(str, "").
+
+-- takes x!y and returns x
+ircnick'("!"::xs, acc) -> acc.
+ircnick'(x::xs, acc) -> ircnick'(xs, acc + x).
+ircnick(str) -> ircnick'(str, "").
+
+
+-- and then we'll kick off the main program.
+
+-- 127.0.0.1
+sock = sockopen("127.0.0.1", 6667). --("irc.freenode.net", 6667).
+
+say(chan, msg) -> fputstr(sock, "PRIVMSG " + chan + " :" + msg + "\r\n").
+
+handleMessage(nick, chan, "$ping") -> say(chan, nick + ": pong").
+handleMessage("darkf", chan, "$quit") -> do
+	say(chan, "bye!");
+	fputstr(sock, "QUIT\r\n");
+	fclose(sock)
+end.
+handleMessage(nick, chan, msg) -> ().
+
+-- handleCommand(source, cmd, args)
+
+handleCommand(_, "PING", [ping]) -> do
+	putstrln("ping: " + ping);
+	fputstr(sock, "PONG :" + ping)
+end.
+
+handleCommand(user, "JOIN", [chan]) -> do
+	putstrln("nick " + ircnick(user) + " joins " + chan)
+end.
+
+handleCommand(user, "PRIVMSG", [chan, msg]) -> do
+	nick = ircnick(user);
+	putstrln("<" + nick + "> " + msg);
+	handleMessage(nick, chan, msg)
+end.
+
+-- nick list
+handleCommand(_, "353", _::"="::chan::[nicks]) -> do
+	-- nicks is space-separated
+	putstrln("nicks in " + chan + ": " + nicks)
+end.
+
+handleCommand(_, "372", [_,msg]) -> putstrln("MOTD: " + msg).
+handleCommand(_, "422", [_,msg]) -> putstrln(msg). -- MOTD is missing
+
+handleCommand(_, "251", _) -> (). -- There are X users and Y services on Z server(s)
+handleCommand(_, "331", _) -> (). -- No topic is set
+handleCommand(_, "366", _) -> (). -- End of NAMES list
+
+handleCommand(src, cmd, args) ->
+	putstrln("Unhandled command: " + cmd + ", with args: " + repr(args) + " from " + src).
+
+handleLine(line) -> do
+	if head(line) == ":" then do
+		-- source
+		sp = takeUntilSpace(tail(line));
+		message = splitirc(snd(sp));
+		handleCommand(fst(sp), head(message), tail(message))
+	end else do
+		message = splitirc(line);
+		handleCommand("", head(message), tail(message))
+	end
+end.
+
+-- send introduction
+fputstr(sock, "PASS foobar\r\n").
+fputstr(sock, "NICK quaileggeater\r\n").
+fputstr(sock, "USER fooname 0 * :Foo G. Bar\r\n").
+fputstr(sock, "JOIN #TYBG\r\n").
+fputstr(sock, "PRIVMSG #TYBG :sup.\r\n").
+
+-- loop receiving lines
+mainloop() ->
+	if feof(sock) != true then
+	do
+		line = fgetline(sock);
+		handleLine(line);
+		true
+	end
+	else
+	  false.
+
+putstrln("beginning mainloop").
+loop(mainloop).
+fclose(sock).
+putstrln("done").
