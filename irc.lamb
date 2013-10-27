@@ -48,7 +48,7 @@ end.
 
 handleCommand(user, "PRIVMSG", [chan, msg]) -> do
 	nick = ircnick(user);
-	putstrln("<" + nick + "> " + msg);
+	putstrln(chan + " " + "<" + nick + "> " + msg);
 	handleMessage(nick, chan, msg)
 end.
 
