@@ -106,6 +106,12 @@ handleMessage(s, nick, chan, "$defact "::line) -> do
 	setFactoids(s, map_insert(factoids, k, v))
 end.
 
+handleMessage(s, "darkf", chan, "$savefacts") -> do
+	saveFactoids(getFactoids(s));
+	say(chan, "factoids saved.");
+	s
+end.
+
 handleMessage(s, nick, chan, "$ping") -> do say(chan, nick + ": pong"); s end.
 handleMessage(s, "darkf", chan, "$quit") -> do
 	say(chan, "bye!");
