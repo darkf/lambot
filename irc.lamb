@@ -1,5 +1,7 @@
 -- First we'll define some helper functions
 
+-- irc stuff
+
 -- Splits a string by spaces, or until it encounters a :, whereby the following is considered one element.
 splitirc'("", stracc, acc) -> acc + [stracc].
 splitirc'(" "::xs, stracc, acc) -> do
@@ -12,9 +14,6 @@ end.
 splitirc'(x::xs, stracc, acc) -> splitirc'(xs, stracc + x, acc).
 -- helper function
 splitirc(str) -> splitirc'(str, "", []).
-
-head(x::_) -> x.
-tail(_::xs) -> xs.
 
 -- (result, rest)
 takeUntilSpace'(" "::xs, acc) -> (acc, xs).
