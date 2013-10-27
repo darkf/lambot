@@ -58,9 +58,6 @@ ircnick'("!"::xs, acc) -> acc.
 ircnick'(x::xs, acc) -> ircnick'(xs, acc + x).
 ircnick(str) -> ircnick'(str, "").
 
--- state stuff
-initialState = ([]).
-
 -- state getters
 getFactoids(state) -> do
 	(factoids) = state;
@@ -70,6 +67,26 @@ end.
 -- state setters
 setFactoids(state, factoids) -> do
 	(factoids)
+end.
+
+-- factoid serialization
+-- basic "key value" (space-separated) format
+saveFactoids(factoids) -> do
+	file = fopen("factoids.txt", "w");
+	map(\(k,v) -> fputstr(file, k + " " + v + "\n"), factoids);
+	fclose(file)
+end.
+
+loadFactoids() -> do
+	file = fopen("factoids.txt", "r");
+	fact = loop(\pairs ->
+		if feof(file) != true then do
+			line = fgetline(file);
+			pair = takeUntilSpace(line);
+			pair :: pairs
+		end else false, []);
+	fclose(file);
+	fact
 end.
 
 -- event handling
@@ -186,6 +203,9 @@ mainloop(state) ->
 	end
 	else
 	  false.
+
+putstrln("initializing").
+initialState = (loadFactoids()).
 
 putstrln("beginning mainloop").
 loop(mainloop, initialState).
