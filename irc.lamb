@@ -5,6 +5,16 @@ map(f, x::xs) -> f(x) :: map(f, xs).
 
 fst((x, _)) -> x.
 
+-- maybe stuff
+
+is_just(("just", _)) -> true.
+is_just(_) -> false.
+
+is_nothing(("nothing")) -> true.
+is_nothing(_) -> false.
+
+unwrap_maybe(("just", x)) -> x.
+
 -- association list
 
 -- insert a pair into a map
@@ -38,6 +48,7 @@ splitirc'(x::xs, stracc, acc) -> splitirc'(xs, stracc + x, acc).
 splitirc(str) -> splitirc'(str, "", []).
 
 -- (result, rest)
+takeUntilSpace'("", acc) -> (acc, ""). -- no spaces
 takeUntilSpace'(" "::xs, acc) -> (acc, xs).
 takeUntilSpace'(x::xs, acc) -> takeUntilSpace'(xs, acc + x).
 takeUntilSpace(str) -> takeUntilSpace'(str, "").
@@ -85,6 +96,22 @@ handleMessage(s, "darkf", chan, "$quit") -> do
 	fclose(sock);
 	s
 end.
+
+-- unknown command, search factoids
+handleMessage(s, nick, chan, "$"::line) -> do
+	(fact, rest) = takeUntilSpace(line);
+	if rest != "" then s -- it had spaces after it, might not want a factoid
+	else do
+		factoids = getFactoids(s);
+		factoid  = map_lookup(factoids, fact);
+		if is_just(factoid) then do
+			say(chan, unwrap_maybe(factoid));
+			s
+		end
+		else s
+	end
+end.
+
 handleMessage(s, nick, chan, msg) -> s.
 
 -- handleCommand(source, cmd, args)
