@@ -27,61 +27,69 @@ ircnick(str) -> ircnick'(str, "").
 
 say(chan, msg) -> fputstr(sock, "PRIVMSG " + chan + " :" + msg + "\r\n").
 
-handleMessage(nick, chan, "$ping") -> say(chan, nick + ": pong").
-handleMessage("darkf", chan, "$quit") -> do
+handleMessage(s, nick, chan, "$ping") -> do say(chan, nick + ": pong"); s end.
+handleMessage(s, "darkf", chan, "$quit") -> do
 	say(chan, "bye!");
 	fputstr(sock, "QUIT\r\n");
-	fclose(sock)
+	fclose(sock);
+	s
 end.
-handleMessage(nick, chan, msg) -> ().
+handleMessage(s, nick, chan, msg) -> s.
 
 -- handleCommand(source, cmd, args)
 
-handleCommand(_, "PING", [ping]) -> do
+handleCommand(s, _, "PING", [ping]) -> do
 	putstrln("ping: " + ping);
-	fputstr(sock, "PONG :" + ping)
+	fputstr(sock, "PONG :" + ping);
+	s
 end.
 
-handleCommand(user, "JOIN", [chan]) -> do
-	putstrln("nick " + ircnick(user) + " joins " + chan)
+handleCommand(s, user, "JOIN", [chan]) -> do
+	putstrln("nick " + ircnick(user) + " joins " + chan);
+	s
 end.
 
-handleCommand(user, "PRIVMSG", [chan, msg]) -> do
+handleCommand(s, user, "PRIVMSG", [chan, msg]) -> do
 	nick = ircnick(user);
 	putstrln(chan + " " + "<" + nick + "> " + msg);
-	handleMessage(nick, chan, msg)
+	handleMessage(s, nick, chan, msg)
 end.
 
 -- nick list
-handleCommand(_, "353", _::"="::chan::[nicks]) -> do
+handleCommand(s, _, "353", _::"="::chan::[nicks]) -> do
 	-- nicks is space-separated
-	putstrln("nicks in " + chan + ": " + nicks)
+	putstrln("nicks in " + chan + ": " + nicks);
+	s
 end.
 
-handleCommand(_, "372", [_,msg]) -> putstrln("MOTD: " + msg).
-handleCommand(_, "422", [_,msg]) -> putstrln(msg). -- MOTD is missing
+handleCommand(s, _, "372", [_,msg]) -> do putstrln("MOTD: " + msg); s end.
+handleCommand(s, _, "422", [_,msg]) -> do putstrln(msg); s end. -- MOTD is missing
 
-handleCommand(_, "251", _) -> (). -- There are X users and Y services on Z server(s)
-handleCommand(_, "331", _) -> (). -- No topic is set
-handleCommand(_, "366", _) -> (). -- End of NAMES list
+handleCommand(s, _, "251", _) -> s. -- There are X users and Y services on Z server(s)
+handleCommand(s, _, "331", _) -> s. -- No topic is set
+handleCommand(s, _, "366", _) -> s. -- End of NAMES list
 
-handleCommand(src, cmd, args) ->
-	putstrln("Unhandled command: " + cmd + ", with args: " + repr(args) + " from " + src).
+handleCommand(s, src, cmd, args) -> do
+	putstrln("Unhandled command: " + cmd + ", with args: " + repr(args) + " from " + src);
+	s
+end.
 
-handleLine(":" :: line) -> do
+handleLine(s, ":" :: line) -> do
 	-- sourced message
 	(source, rest) = takeUntilSpace(line);
 	command::args = splitirc(rest);
-	handleCommand(source, command, args)
+	handleCommand(s, source, command, args)
 end.
 
-handleLine(line) -> do
+handleLine(s, line) -> do
 	-- non-sourced message
 	command::args = splitirc(line);
-	handleCommand(source, command, args)
+	handleCommand(s, source, command, args)
 end.
 
 -- now for our actual program!
+
+initialState = [].
 
 -- build our socket and connect to the server
 sock = sockopen("127.0.0.1", 6667).
@@ -94,17 +102,16 @@ fputstr(sock, "JOIN #TYBG\r\n").
 fputstr(sock, "PRIVMSG #TYBG :sup.\r\n").
 
 -- loop receiving lines
-mainloop() ->
+mainloop(state) ->
 	if feof(sock) != true then
 	do
 		line = fgetline(sock);
-		handleLine(line);
-		true
+		handleLine(state, line)
 	end
 	else
 	  false.
 
 putstrln("beginning mainloop").
-loop(mainloop).
+loop(mainloop, []).
 fclose(sock).
 putstrln("done").
