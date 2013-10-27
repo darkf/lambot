@@ -1,3 +1,8 @@
+-- global data stuff
+
+-- nicks of administrators
+ADMINS = ["darkf"].
+
 -- First we'll define some helper functions
 
 map(f, []) -> [].
@@ -14,6 +19,12 @@ is_nothing(("nothing")) -> true.
 is_nothing(_) -> false.
 
 unwrap_maybe(("just", x)) -> x.
+
+-- list membership test
+is_member([], _) -> false.
+is_member(x::xs, member) ->
+	if x == member then true
+	else is_member(xs, member).
 
 -- association list
 
@@ -57,6 +68,10 @@ takeUntilSpace(str) -> takeUntilSpace'(str, "").
 ircnick'("!"::xs, acc) -> acc.
 ircnick'(x::xs, acc) -> ircnick'(xs, acc + x).
 ircnick(str) -> ircnick'(str, "").
+
+isAdmin(nick) -> do
+	is_member(ADMINS, nick)
+end.
 
 -- state getters
 getFactoids(state) -> do
@@ -106,17 +121,24 @@ handleMessage(s, nick, chan, "$defact "::line) -> do
 	setFactoids(s, map_insert(factoids, k, v))
 end.
 
-handleMessage(s, "darkf", chan, "$savefacts") -> do
-	saveFactoids(getFactoids(s));
-	say(chan, "factoids saved.");
+handleMessage(s, nick, chan, "$savefacts") -> do
+	if isAdmin(nick) then do
+		saveFactoids(getFactoids(s));
+		say(chan, "factoids saved.")
+	end
+	else say(chan, nick + ": you are not an admin");
 	s
 end.
 
 handleMessage(s, nick, chan, "$ping") -> do say(chan, nick + ": pong"); s end.
-handleMessage(s, "darkf", chan, "$quit") -> do
-	say(chan, "bye!");
-	fputstr(sock, "QUIT\r\n");
-	fclose(sock);
+
+handleMessage(s, nick, chan, "$quit") -> do
+	if isAdmin(nick) then do
+		say(chan, "bye!");
+		fputstr(sock, "QUIT\r\n");
+		fclose(sock)
+	end
+	else say(chan, nick + ": you are not an admin");
 	s
 end.
 
