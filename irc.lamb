@@ -1,5 +1,27 @@
 -- First we'll define some helper functions
 
+map(f, []) -> [].
+map(f, x::xs) -> f(x) :: map(f, xs).
+
+fst((x, _)) -> x.
+
+-- association list
+
+-- insert a pair into a map
+map_insert(assoc, key, value) -> (key, value) :: assoc.
+
+-- lookup by key
+map_lookup([], _) -> ("nothing").
+map_lookup((k,v)::xs, key) ->
+	if k == key then ("just", v)
+	else map_lookup(xs, key).
+
+-- remove a key from a map
+map_remove([], key) -> [].
+map_remove((k,v)::xs, key) ->
+	if k == key then xs
+	else (k,v) :: map_remove(xs, key).
+
 -- irc stuff
 
 -- Splits a string by spaces, or until it encounters a :, whereby the following is considered one element.
@@ -25,7 +47,36 @@ ircnick'("!"::xs, acc) -> acc.
 ircnick'(x::xs, acc) -> ircnick'(xs, acc + x).
 ircnick(str) -> ircnick'(str, "").
 
+-- state stuff
+initialState = ([]).
+
+-- state getters
+getFactoids(state) -> do
+	(factoids) = state;
+	factoids
+end.
+
+-- state setters
+setFactoids(state, factoids) -> do
+	(factoids)
+end.
+
+-- event handling
+
 say(chan, msg) -> fputstr(sock, "PRIVMSG " + chan + " :" + msg + "\r\n").
+
+handleMessage(s, nick, chan, "$factoids") -> do
+	factoids = map(fst, getFactoids(s));
+	say(chan, nick + ": " + repr(factoids));
+	s
+end.
+
+handleMessage(s, nick, chan, "$defact "::line) -> do
+	(k,v) = takeUntilSpace(line);
+	factoids = getFactoids(s);
+	say(chan, nick + ": defined " + k);
+	setFactoids(s, map_insert(factoids, k, v))
+end.
 
 handleMessage(s, nick, chan, "$ping") -> do say(chan, nick + ": pong"); s end.
 handleMessage(s, "darkf", chan, "$quit") -> do
@@ -84,12 +135,10 @@ end.
 handleLine(s, line) -> do
 	-- non-sourced message
 	command::args = splitirc(line);
-	handleCommand(s, source, command, args)
+	handleCommand(s, "", command, args)
 end.
 
 -- now for our actual program!
-
-initialState = [].
 
 -- build our socket and connect to the server
 sock = sockopen("127.0.0.1", 6667).
@@ -112,6 +161,6 @@ mainloop(state) ->
 	  false.
 
 putstrln("beginning mainloop").
-loop(mainloop, []).
+loop(mainloop, initialState).
 fclose(sock).
 putstrln("done").
