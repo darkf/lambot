@@ -1,7 +1,14 @@
--- global data stuff
+-- config constants
+
+HOST = "127.0.0.1".
+PORT = 6667.
+NICK = "lambot".
 
 -- nicks of administrators
 ADMINS = ["darkf"].
+
+-- channels to join
+CHANS = ["#lobby"].
 
 -- First we'll define some helper functions
 
@@ -130,6 +137,13 @@ handleMessage(s, nick, chan, "$savefacts") -> do
 	s
 end.
 
+handleMessage(s, nick, chan, "$join "::j) -> do
+	if isAdmin(nick) then do
+		fputstr(sock, "JOIN " + j + "\r\n");
+		s
+	end else s
+end.
+
 handleMessage(s, nick, chan, "$ping") -> do say(chan, nick + ": pong"); s end.
 
 handleMessage(s, nick, chan, "$quit") -> do
@@ -213,14 +227,13 @@ end.
 -- now for our actual program!
 
 -- build our socket and connect to the server
-sock = sockopen("127.0.0.1", 6667).
+sock = sockopen(HOST, PORT).
 
 -- send introduction
-fputstr(sock, "PASS foobar\r\n").
-fputstr(sock, "NICK quaileggeater\r\n").
-fputstr(sock, "USER fooname 0 * :Foo G. Bar\r\n").
-fputstr(sock, "JOIN #TYBG\r\n").
-fputstr(sock, "PRIVMSG #TYBG :sup.\r\n").
+fputstr(sock, "PASS " + NICK + "\r\n").
+fputstr(sock, "NICK " + NICK + "\r\n").
+fputstr(sock, "USER " + NICK + " 0 * :Lamb Da. Bot\r\n").
+map(\chan -> fputstr(sock, "JOIN " + chan + "\r\n"), CHANS).
 
 -- loop receiving lines
 mainloop(state) ->
