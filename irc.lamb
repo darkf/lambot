@@ -22,7 +22,7 @@ fst((x, _)) -> x.
 is_just(("just", _)) -> true.
 is_just(_) -> false.
 
-is_nothing(("nothing")) -> true.
+is_nothing(("nothing",)) -> true.
 is_nothing(_) -> false.
 
 unwrap_maybe(("just", x)) -> x.
@@ -39,7 +39,7 @@ is_member(x::xs, member) ->
 map_insert(assoc, key, value) -> (key, value) :: assoc.
 
 -- lookup by key
-map_lookup([], _) -> ("nothing").
+map_lookup([], _) -> ("nothing",).
 map_lookup((k,v)::xs, key) ->
 	if k == key then ("just", v)
 	else map_lookup(xs, key).
@@ -82,13 +82,13 @@ end.
 
 -- state getters
 getFactoids(state) -> do
-	(factoids) = state;
+	(factoids,) = state;
 	factoids
 end.
 
 -- state setters
 setFactoids(state, factoids) -> do
-	(factoids)
+	(factoids,)
 end.
 
 -- factoid serialization
@@ -246,7 +246,7 @@ mainloop(state) ->
 	  false.
 
 putstrln("initializing").
-initialState = (loadFactoids()).
+initialState = (loadFactoids(),).
 
 putstrln("beginning mainloop").
 loop(mainloop, initialState).
