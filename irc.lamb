@@ -177,7 +177,7 @@ handleMessage(s, nick, chan, msg) -> s.
 
 handleCommand(s, _, "PING", [ping]) -> do
 	putstrln("ping: " + ping);
-	fputstr(sock, "PONG :" + ping);
+	fputstr(sock, "PONG :" + ping + "\r\n");
 	s
 end.
 
