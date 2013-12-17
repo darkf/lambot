@@ -10,6 +10,11 @@ ADMINS = ["darkf"].
 -- channels to join
 CHANS = ["#lobby"].
 
+-- the lexical environment that $eval uses
+EVAL_ENV = [("loop", loop),
+			("repr", repr),
+			("itos", itos)].
+
 -- First we'll define some helper functions
 
 map(f, []) -> [].
@@ -134,6 +139,12 @@ handleMessage(s, nick, chan, "$savefacts") -> do
 		say(chan, "factoids saved.")
 	end
 	else say(chan, nick + ": you are not an admin");
+	s
+end.
+
+handleMessage(s, nick, chan, "$eval "::line) -> do
+	ret = eval(line, EVAL_ENV);
+	say(chan, nick + ": " + repr(ret));
 	s
 end.
 
