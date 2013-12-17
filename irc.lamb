@@ -167,6 +167,20 @@ handleMessage(s, nick, chan, "$quit") -> do
 	s
 end.
 
+handleMessage(s, nick, chan, "$at "::line) -> do
+	(toNick, fact) = takeUntilSpace(line);
+	factoids = getFactoids(s);
+	factoid  = map_lookup(factoids, fact);
+	if is_just(factoid) then do
+		say(chan, toNick + ": " + unwrap_maybe(factoid));
+		s
+	end
+	else do
+		say(chan, nick + ": No such factoid: " + fact);
+		s
+	end
+end.
+
 -- unknown command, search factoids
 handleMessage(s, nick, chan, "$"::line) -> do
 	(fact, rest) = takeUntilSpace(line);
