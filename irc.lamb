@@ -1,3 +1,5 @@
+import("std/list").
+
 -- config constants
 
 HOST = "127.0.0.1".
@@ -11,14 +13,13 @@ ADMINS = ["darkf"].
 CHANS = ["#lobby"].
 
 -- the lexical environment that $eval uses
-EVAL_ENV = [("loop", loop),
+EVAL_ENV = [("id", id),
+			("loop", loop),
 			("repr", repr),
-			("itos", itos)].
-
--- First we'll define some helper functions
-
-map(f, []) -> [].
-map(f, x::xs) -> f(x) :: map(f, xs).
+			("itos", itos),
+			("globals", globals),
+			("locals", locals),
+			("list", list)].
 
 fst((x, _)) -> x.
 
@@ -31,12 +32,6 @@ is_nothing(("nothing",)) -> true.
 is_nothing(_) -> false.
 
 unwrap_maybe(("just", x)) -> x.
-
--- list membership test
-is_member([], _) -> false.
-is_member(x::xs, member) ->
-	if x == member then true
-	else is_member(xs, member).
 
 -- association list
 
@@ -63,9 +58,7 @@ splitirc'(" "::xs, stracc, acc) -> do
 	splitirc'(xs, "", acc + [stracc])
 end.
 -- prefix message
-splitirc'(":"::xs, _, acc) -> do
-	acc + [xs]
-end.
+splitirc'(":"::xs, _, acc) -> acc + [xs].
 splitirc'(x::xs, stracc, acc) -> splitirc'(xs, stracc + x, acc).
 -- helper function
 splitirc(str) -> splitirc'(str, "", []).
@@ -81,9 +74,7 @@ ircnick'("!"::xs, acc) -> acc.
 ircnick'(x::xs, acc) -> ircnick'(xs, acc + x).
 ircnick(str) -> ircnick'(str, "").
 
-isAdmin(nick) -> do
-	is_member(ADMINS, nick)
-end.
+isAdmin(nick) -> list\memberOf?(ADMINS, nick).
 
 -- state getters
 getFactoids(state) -> do
@@ -100,7 +91,7 @@ end.
 -- basic "key value" (space-separated) format
 saveFactoids(factoids) -> do
 	file = fopen("factoids.txt", "w");
-	map(\(k,v) -> fputstr(file, k + " " + v + "\n"), factoids);
+	list\map(\(k,v) -> fputstr(file, k + " " + v + "\n"), factoids);
 	fclose(file)
 end.
 
@@ -121,7 +112,7 @@ end.
 say(chan, msg) -> fputstr(sock, "PRIVMSG " + chan + " :" + msg + "\r\n").
 
 handleMessage(s, nick, chan, "$factoids") -> do
-	factoids = map(fst, getFactoids(s));
+	factoids = list\map(fst, getFactoids(s));
 	say(chan, nick + ": " + repr(factoids));
 	s
 end.
@@ -258,17 +249,18 @@ sock = sockopen(HOST, PORT).
 fputstr(sock, "PASS " + NICK + "\r\n").
 fputstr(sock, "NICK " + NICK + "\r\n").
 fputstr(sock, "USER " + NICK + " 0 * :Lamb Da. Bot\r\n").
-map(\chan -> fputstr(sock, "JOIN " + chan + "\r\n"), CHANS).
+
+-- note: workaround for issue #19 (passing lambdas to modules in the global scope is incorrect)
+joinChans() -> list\map(\chan -> fputstr(sock, "JOIN " + chan + "\r\n"), CHANS).
+joinChans().
 
 -- loop receiving lines
 mainloop(state) ->
-	if feof(sock) != true then
-	do
+	if feof(sock) != true then do
 		line = fgetline(sock);
 		handleLine(state, line)
 	end
-	else
-	  false.
+	else false. -- EOF, stop looping
 
 putstrln("initializing").
 initialState = (loadFactoids(),).
