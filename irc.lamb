@@ -202,10 +202,11 @@ handleCommand(s, user, "JOIN", [chan]) -> do
 	s
 end.
 
-handleCommand(s, user, "PRIVMSG", [chan, msg]) -> do
+handleCommand(s, user, "PRIVMSG", [recipient, msg]) -> do
 	nick = ircnick(user);
-	putstrln(chan + " " + "<" + nick + "> " + msg);
-	handleMessage(s, nick, chan, msg)
+	target = if recipient != NICK then recipient else nick;
+	putstrln(target + " " + "<" + nick + "> " + msg);
+	handleMessage(s, nick, target, msg)
 end.
 
 -- nick list
