@@ -1,10 +1,14 @@
 import("std/list").
+import("std/str").
+import("std/http").
 
 -- config constants
 
 HOST = "127.0.0.1".
 PORT = 6667.
 NICK = "lambot".
+
+LASTFM_API_KEY = "YOUR_LASTFM_API_KEY_HERE".
 
 -- nicks of administrators
 ADMINS = ["darkf"].
@@ -73,6 +77,19 @@ map_remove([], key) -> [].
 map_remove((k,v)::xs, key) ->
 	if k == key then xs
 	else (k,v) :: map_remove(xs, key).
+
+-- dead simple XML tag line parser
+tag_contents("<"::xs, tag) -> do
+	len = list\length(tag);
+	if str\takeS(len, xs) == tag then do
+		_ :: rest = str\dropWhileS(\c -> c != ">", xs);
+		("just", str\takeUntilS(\c -> c == "<", rest))
+	end
+	else
+		tag_contents(str\dropS(len+1, xs), tag)
+end.
+tag_contents(_::xs, tag) -> tag_contents(xs, tag).
+tag_contents(_, tag) -> ("nothing",). -- assert?
 
 -- irc stuff
 
@@ -159,6 +176,18 @@ end.
 
 handleMessage(s, nick, chan, "$eval "::line) -> do
 	irc_eval(line, chan, nick);
+	s
+end.
+
+handleMessage(s, nick, chan, "$np "::lastfm_user) -> do
+	http\async_http_get("http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=" + lastfm_user + "&api_key=" + LASTFM_API_KEY + "&limit=1",
+		\resp -> do
+			("ok", xml) = resp;
+			("just", artist) = tag_contents(xml, "artist");
+			("just", album) = tag_contents(xml, "album");
+			("just", title) = tag_contents(xml, "name");
+			say(chan, nick + ": " + lastfm_user + " is listening to " + artist + " - " + title + " (from " + album + ")")
+		end);
 	s
 end.
 
