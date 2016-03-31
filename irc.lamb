@@ -1,20 +1,7 @@
 import("std/list").
 import("std/str").
 import("std/http").
-
--- config constants
-
-HOST = "127.0.0.1".
-PORT = 6667.
-NICK = "lambot".
-
-LASTFM_API_KEY = "YOUR_LASTFM_API_KEY_HERE".
-
--- nicks of administrators
-ADMINS = ["darkf"].
-
--- channels to join
-CHANS = ["#lobby"].
+import("config").
 
 -- the lexical environment that $eval uses
 EVAL_ENV = [("id", id),
@@ -115,7 +102,7 @@ ircnick'("!"::xs, acc) -> acc.
 ircnick'(x::xs, acc) -> ircnick'(xs, acc + x).
 ircnick(str) -> ircnick'(str, "").
 
-isAdmin(nick) -> list\memberOf?(ADMINS, nick).
+isAdmin(nick) -> list\memberOf?(config\ADMINS, nick).
 
 -- state getters
 getFactoids(state) -> do
@@ -180,7 +167,7 @@ handleMessage(s, nick, chan, "$eval "::line) -> do
 end.
 
 handleMessage(s, nick, chan, "$np "::lastfm_user) -> do
-	http\async_http_get("http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=" + lastfm_user + "&api_key=" + LASTFM_API_KEY + "&limit=1",
+	http\async_http_get("http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=" + lastfm_user + "&api_key=" + config\LASTFM_API_KEY + "&limit=1",
 		\resp -> do
 			("ok", xml) = resp;
 			("just", artist) = tag_contents(xml, "artist");
@@ -256,7 +243,7 @@ end.
 
 handleCommand(s, user, "PRIVMSG", [recipient, msg]) -> do
 	nick = ircnick(user);
-	target = if recipient != NICK then recipient else nick;
+	target = if recipient != config\NICK then recipient else nick;
 	putstrln(target + " " + "<" + nick + "> " + msg);
 	handleMessage(s, nick, target, msg)
 end.
@@ -296,15 +283,15 @@ end.
 -- now for our actual program!
 
 -- build our socket and connect to the server
-sock = sockopen(HOST, PORT).
+sock = sockopen(config\HOST, config\PORT).
 
 -- send introduction
-fputstr(sock, "PASS " + NICK + "\r\n").
-fputstr(sock, "NICK " + NICK + "\r\n").
-fputstr(sock, "USER " + NICK + " 0 * :Lamb Da. Bot\r\n").
+fputstr(sock, "PASS " + config\NICK + "\r\n").
+fputstr(sock, "NICK " + config\NICK + "\r\n").
+fputstr(sock, "USER " + config\NICK + " 0 * :Lamb Da. Bot\r\n").
 
 -- note: workaround for issue #19 (passing lambdas to modules in the global scope is incorrect)
-joinChans() -> list\map(\chan -> fputstr(sock, "JOIN " + chan + "\r\n"), CHANS).
+joinChans() -> list\map(\chan -> fputstr(sock, "JOIN " + chan + "\r\n"), config\CHANS).
 joinChans().
 
 -- loop receiving lines

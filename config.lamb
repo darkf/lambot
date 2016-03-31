@@ -1,0 +1,13 @@
+-- config constants
+
+HOST = "127.0.0.1".
+PORT = 6667.
+NICK = "lambot".
+
+LASTFM_API_KEY = "YOUR_LASTFM_API_KEY_HERE".
+
+-- nicks of administrators
+ADMINS = ["darkf"].
+
+-- channels to join
+CHANS = ["#lobby"].
