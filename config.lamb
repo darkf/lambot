@@ -1,13 +1,14 @@
 -- config constants
 
-HOST = "127.0.0.1".
+HOST = "irc.freenode.net".
 PORT = 6667.
 NICK = "lambot".
+PASS = "".
 
 LASTFM_API_KEY = "YOUR_LASTFM_API_KEY_HERE".
 
 -- nicks of administrators
-ADMINS = ["darkf"].
+ADMINS = ["darkf", "nchambers"].
 
 -- channels to join
-CHANS = ["#lobby"].
+CHANS = ["##eggnog"].

@@ -1,3 +1,4 @@
+import("std/base64").
 import("std/list").
 import("std/str").
 import("std/http").
@@ -262,9 +263,27 @@ handleCommand(s, _, "251", _) -> s. -- There are X users and Y services on Z ser
 handleCommand(s, _, "331", _) -> s. -- No topic is set
 handleCommand(s, _, "366", _) -> s. -- End of NAMES list
 
+handleCommand(s, _, "CAP", ["*", "ACK", "sasl "]) -> do
+    putstrln("Starting SASL handshake.");
+    fputstr(sock, "AUTHENTICATE PLAIN\r\n")
+end.
+
+handleCommand(s, _, "AUTHENTICATE", ["+"]) -> do
+    auth = base64\base64_encode(config\NICK + "\0" + config\NICK + "\0" + config\PASS);
+    fputstr(sock, "AUTHENTICATE " + auth + "\r\n")
+end.
+
+handleCommand(s, _, "903", _) -> do
+    putstrln("SASL authentication successful.");
+    fputstr(sock, "CAP END\r\n");
+    fputstr(sock, "NICK " + config\NICK + "\r\n");
+    fputstr(sock, "USER " + config\NICK + " 0 * :Lamb Da. Bot\r\n");
+    joinChans() -> list\map(\chan -> fputstr(sock, "JOIN " + chan + "\r\n"), config\CHANS);
+    joinChans()
+end.
+
 handleCommand(s, src, cmd, args) -> do
-	putstrln("Unhandled command: " + cmd + ", with args: " + repr(args) + " from " + src);
-	s
+	putstrln("Unhandled command: " + cmd + ", with args: " + repr(args) + " from " + src)
 end.
 
 handleLine(s, ":" :: line) -> do
@@ -286,13 +305,15 @@ end.
 sock = sockopen(config\HOST, config\PORT).
 
 -- send introduction
-fputstr(sock, "PASS " + config\NICK + "\r\n").
-fputstr(sock, "NICK " + config\NICK + "\r\n").
-fputstr(sock, "USER " + config\NICK + " 0 * :Lamb Da. Bot\r\n").
-
--- note: workaround for issue #19 (passing lambdas to modules in the global scope is incorrect)
-joinChans() -> list\map(\chan -> fputstr(sock, "JOIN " + chan + "\r\n"), config\CHANS).
-joinChans().
+if config\PASS == "" then do
+    fputstr(sock, "NICK " + config\NICK + "\r\n");
+    fputstr(sock, "USER " + config\NICK + " 0 * :Lamb Da. Bot\r\n");
+    joinChans() -> list\map(\chan -> fputstr(sock, "JOIN " + chan + "\r\n"), config\CHANS);
+    joinChans()
+end
+else do
+    fputstr(sock, "CAP REQ :sasl\r\n")
+end.
 
 -- loop receiving lines
 mainloop(state) ->
