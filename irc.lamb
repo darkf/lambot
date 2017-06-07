@@ -265,12 +265,14 @@ handleCommand(s, _, "366", _) -> s. -- End of NAMES list
 
 handleCommand(s, _, "CAP", ["*", "ACK", "sasl "]) -> do
     putstrln("Starting SASL handshake.");
-    fputstr(sock, "AUTHENTICATE PLAIN\r\n")
+    fputstr(sock, "AUTHENTICATE PLAIN\r\n");
+    s
 end.
 
 handleCommand(s, _, "AUTHENTICATE", ["+"]) -> do
     auth = base64\base64_encode(config\NICK + "\0" + config\NICK + "\0" + config\PASS);
-    fputstr(sock, "AUTHENTICATE " + auth + "\r\n")
+    fputstr(sock, "AUTHENTICATE " + auth + "\r\n");
+    s
 end.
 
 handleCommand(s, _, "903", _) -> do
@@ -279,11 +281,13 @@ handleCommand(s, _, "903", _) -> do
     fputstr(sock, "NICK " + config\NICK + "\r\n");
     fputstr(sock, "USER " + config\NICK + " 0 * :Lamb Da. Bot\r\n");
     joinChans() -> list\map(\chan -> fputstr(sock, "JOIN " + chan + "\r\n"), config\CHANS);
-    joinChans()
+    joinChans();
+    s
 end.
 
 handleCommand(s, src, cmd, args) -> do
-	putstrln("Unhandled command: " + cmd + ", with args: " + repr(args) + " from " + src)
+	putstrln("Unhandled command: " + cmd + ", with args: " + repr(args) + " from " + src);
+	s
 end.
 
 handleLine(s, ":" :: line) -> do
